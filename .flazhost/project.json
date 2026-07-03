@@ -1,0 +1,11 @@
+{
+  "name": "KotlinAdmin",
+  "language": "kotlin",
+  "install": [
+    { "default": "./gradlew assemble", "win32": ".\\gradlew.bat assemble" }
+  ],
+  "migrate": [],
+  "start": { "default": "./gradlew run", "win32": ".\\gradlew.bat run" },
+  "url": "http://localhost:${APP_PORT}",
+  "readyPath": "/"
+}
