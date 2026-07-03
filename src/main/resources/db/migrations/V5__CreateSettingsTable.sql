@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS settings (
+    id          VARCHAR(36)  NOT NULL,
+    initial     VARCHAR(255),
+    name        VARCHAR(255),
+    description TEXT,
+    icon        VARCHAR(255),
+    logo        VARCHAR(255),
+    login_image VARCHAR(255),
+    phone       VARCHAR(255),
+    address     VARCHAR(255),
+    email       VARCHAR(255),
+    copyright   VARCHAR(255),
+    theme       VARCHAR(20)  NOT NULL DEFAULT 'Blue',
+    fe_template VARCHAR(80)  NOT NULL DEFAULT 'agency-consulting-002-creative-agency',
+    created_by  VARCHAR(36),
+    updated_by  VARCHAR(36),
+    created_at  TIMESTAMP    NOT NULL,
+    updated_at  TIMESTAMP    NOT NULL,
+    PRIMARY KEY (id)
+);

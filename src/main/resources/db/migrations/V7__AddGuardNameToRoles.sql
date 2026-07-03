@@ -1,0 +1,1 @@
+ALTER TABLE roles ADD COLUMN guard_name VARCHAR(20) NOT NULL DEFAULT 'web';

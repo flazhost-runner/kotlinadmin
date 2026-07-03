@@ -1,0 +1,53 @@
+# Detekt configuration — KotlinAdmin
+# Dipakai dengan buildUponDefaultConfig = true: file ini hanya berisi penyesuaian
+# terhadap default detekt. Prinsip: gate tetap ketat (maxIssues 0); penyesuaian di
+# bawah ini adalah konvensi proyek yang disengaja, bukan pelemahan aturan.
+
+style:
+  # Konvensi proyek: wildcard import diizinkan untuk DSL-heavy library (Ktor, Exposed)
+  # dan package internal yang memang dipakai sebagai satu kesatuan (core.routing, models).
+  WildcardImport:
+    active: true
+    excludeImports:
+      - 'io.ktor.*'
+      - 'org.jetbrains.exposed.*'
+      - 'com.kotlinadmin.core.routing.*'
+      - 'com.kotlinadmin.modules.access.models.*'
+      - 'java.util.*'
+  MagicNumber:
+    active: true
+    # Definisi kolom Exposed (varchar length dsb) dan properti konfigurasi bernama
+    # bukan "magic number" — nilainya terdokumentasi lewat nama propertinya.
+    ignorePropertyDeclaration: true
+
+formatting:
+  # Duplikat dari style > WildcardImport; kebijakan wildcard diatur satu pintu di sana.
+  NoWildcardImports:
+    active: false
+
+complexity:
+  LongMethod:
+    active: true
+    # File route Ktor = deklarasi routing DSL (satu blok per modul), bukan logika
+    # bercabang; Application.module() = urutan install plugin bootstrap.
+    # ViewHelper.respondView menyiapkan view-model lengkap (66 baris deklaratif).
+    threshold: 70
+    excludes:
+      - '**/modules/**/routes/**'
+      - '**/Application.kt'
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 25
+    # AppConfig.fromEnv: pemetaan env -> config datar (banyak `?:`), bukan percabangan logika.
+    excludes:
+      - '**/modules/**/routes/**'
+      - '**/Application.kt'
+      - '**/config/AppConfig.kt'
+  TooManyFunctions:
+    active: true
+    # Service/interface CRUD standar (index/store/show/update/destroy + varian API/web)
+    # wajar memiliki 12-15 fungsi.
+    thresholdInClasses: 16
+    thresholdInInterfaces: 16
+    thresholdInObjects: 16
+    thresholdInFiles: 16

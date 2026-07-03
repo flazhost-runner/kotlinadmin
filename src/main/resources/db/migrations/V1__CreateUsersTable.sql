@@ -1,0 +1,23 @@
+CREATE TABLE IF NOT EXISTS users (
+    id                   VARCHAR(36)  NOT NULL,
+    code                 VARCHAR(20)  NOT NULL,
+    name                 VARCHAR(50)  NOT NULL,
+    phone                VARCHAR(15),
+    email                VARCHAR(255) NOT NULL,
+    email_verified_at    TIMESTAMP,
+    password             VARCHAR(255) NOT NULL,
+    password_otp         VARCHAR(255),
+    password_otp_expires BIGINT,
+    status               VARCHAR(20)  NOT NULL DEFAULT 'Active',
+    picture              VARCHAR(255),
+    blocked              BOOLEAN      NOT NULL DEFAULT FALSE,
+    blocked_reason       VARCHAR(255),
+    timezone             VARCHAR(255) NOT NULL DEFAULT 'UTC',
+    created_by           VARCHAR(36),
+    updated_by           VARCHAR(36),
+    created_at           TIMESTAMP    NOT NULL,
+    updated_at           TIMESTAMP    NOT NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT users_code_unique  UNIQUE (code),
+    CONSTRAINT users_email_unique UNIQUE (email)
+);
