@@ -12,7 +12,9 @@ import com.kotlinadmin.modules.auth.services.AuthService
 import com.kotlinadmin.modules.auth.services.IAuthService
 import com.kotlinadmin.modules.dashboard.services.DashboardService
 import com.kotlinadmin.modules.dashboard.services.IDashboardService
+import com.kotlinadmin.modules.home.services.FeCatalogService
 import com.kotlinadmin.modules.home.services.HomeService
+import com.kotlinadmin.modules.home.services.IFeCatalogService
 import com.kotlinadmin.modules.home.services.IHomeService
 import com.kotlinadmin.modules.media.services.IMediaService
 import com.kotlinadmin.modules.media.services.MediaService
@@ -34,5 +36,6 @@ fun appModule(config: AppConfig) = module {
     single<ISettingService> { SettingService() }
     single<IProfileService> { ProfileService() }
     single<IHomeService> { HomeService() }
+    single<IFeCatalogService> { FeCatalogService(config.feTemplateRemote, config.feTemplateCacheDir) }
     single<IMediaService> { MediaService() }
 }

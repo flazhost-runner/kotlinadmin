@@ -43,6 +43,7 @@ import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.auth.jwt.jwt
 import io.ktor.server.auth.session
 import io.ktor.server.freemarker.FreeMarker
+import io.ktor.server.http.content.staticFiles
 import io.ktor.server.http.content.staticResources
 import io.ktor.server.netty.EngineMain
 import io.ktor.server.plugins.compression.Compression
@@ -259,6 +260,8 @@ fun Application.configureRouting(config: AppConfig) {
     routing {
         staticResources("/assets", "static")
         staticResources("/be", "static/be")
+        // File upload (logo/icon/login_image) — getFile() menghasilkan URL /uploads/*.
+        staticFiles("/uploads", java.io.File("uploads"))
 
         if (config.isFullMode) {
             authModule()

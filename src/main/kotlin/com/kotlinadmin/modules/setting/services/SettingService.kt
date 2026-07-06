@@ -49,11 +49,6 @@ class SettingService : ISettingService {
         SettingCache.invalidate()
     }
 
-    override suspend fun previewTemplate(slug: String): String {
-        // Stub: return placeholder HTML for the template preview
-        return "<html><body><p>Template preview for: $slug</p></body></html>"
-    }
-
     private fun sanitizeHtml(html: String): String =
         Jsoup.clean(html, Safelist.relaxed())
 }

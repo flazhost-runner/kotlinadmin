@@ -21,6 +21,26 @@ class SmokeTest : DescribeSpec({
             }
         }
 
+        it("landing (/) renders the canonical v6 template bound to Setting") {
+            testApplication {
+                application { module() }
+                val body = client.get("/").bodyAsText()
+                // Marker section landing v6 (paritas NodeAdmin/GoAdmin bundled default).
+                body shouldContain "_hero_digital_agency_v6_001"
+                body shouldContain "_footer_dark_subscribe_v6_001"
+                body shouldContain "data-motion"
+            }
+        }
+
+        it("/home alias renders the same landing") {
+            testApplication {
+                application { module() }
+                val response = client.get("/home")
+                response.status shouldBe HttpStatusCode.OK
+                response.bodyAsText() shouldContain "_hero_digital_agency_v6_001"
+            }
+        }
+
         it("/auth/login is accessible and returns 200") {
             testApplication {
                 application { module() }
@@ -63,6 +83,17 @@ class SmokeTest : DescribeSpec({
                 application { module() }
                 val response = client.get("/auth/login")
                 response.bodyAsText() shouldContain "Hello, Welcome Back!"
+            }
+        }
+
+        it("login page has no viewport-escaping absolute image (layout regression)") {
+            testApplication {
+                application { module() }
+                val body = client.get("/auth/login").bodyAsText()
+                // Regresi "berantakan": img absolute tanpa ancestor relative + src 404.
+                body.contains("absolute inset-0") shouldBe false
+                body.contains("/modules/setting/login-image.png") shouldBe false
+                body shouldContain "sidebar-gradient"
             }
         }
 

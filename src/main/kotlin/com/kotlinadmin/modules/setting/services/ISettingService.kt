@@ -30,5 +30,4 @@ interface ISettingService {
     suspend fun get(): SettingData
     suspend fun update(dto: UpdateSettingDto, actorId: String): SettingData
     suspend fun invalidateCache()
-    suspend fun previewTemplate(slug: String): String
 }

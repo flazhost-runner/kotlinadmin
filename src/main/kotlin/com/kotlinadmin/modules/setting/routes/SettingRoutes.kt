@@ -4,6 +4,9 @@ import com.kotlinadmin.core.helpers.respondJson
 import com.kotlinadmin.core.helpers.respondView
 import com.kotlinadmin.core.routing.*
 import com.kotlinadmin.core.session.withFlash
+import com.kotlinadmin.modules.home.services.DEFAULT_FE_TEMPLATE
+import com.kotlinadmin.modules.home.services.IFeCatalogService
+import com.kotlinadmin.modules.home.services.isValidFeSlug
 import com.kotlinadmin.modules.setting.services.ISettingService
 import com.kotlinadmin.modules.setting.services.UpdateSettingDto
 import io.ktor.http.*
@@ -17,17 +20,33 @@ import org.koin.ktor.ext.get
 
 fun Application.settingModule() {
     val settingService = get<ISettingService>()
+    val feCatalog = get<IFeCatalogService>()
 
     routing {
         namedGet("admin.v1.setting.index", "/admin/v1/setting") {
             val session = call.requireAuthenticated()
             call.checkAccess("admin.v1.setting.index", "GET")
             val setting = settingService.get()
+            // Katalog switcher: filter nama/kategori + pagination 12/halaman,
+            // slug aktif di-pin ke halaman 1 (paritas NodeAdmin/GoAdmin).
+            val feActive = setting.feTemplate.ifBlank { DEFAULT_FE_TEMPLATE }
+            val fePage = call.request.queryParameters["fe_page"]?.toIntOrNull() ?: 1
+            val feSearch = call.request.queryParameters["fe_search"]
+            val feCategory = call.request.queryParameters["fe_category"]
+            val catalogPage = feCatalog.paginate(feSearch, feCategory, fePage, feActive)
             call.respondView(
                 "setting/index.ftl",
                 mapOf(
                     "setting_data" to setting,
-                    "page_title" to "Setting"
+                    "page_title" to "Setting",
+                    "fe_catalog" to catalogPage.items.map { it.toMap() },
+                    "fe_total" to catalogPage.total,
+                    "fe_page" to catalogPage.page,
+                    "fe_last_page" to catalogPage.lastPage,
+                    "fe_active" to feActive,
+                    "fe_categories" to feCatalog.categories(),
+                    "fe_search" to (feSearch ?: ""),
+                    "fe_category" to (feCategory ?: "")
                 )
             )
         }
@@ -54,21 +73,24 @@ fun Application.settingModule() {
 
             settingService.update(dto, session.userId)
             settingService.invalidateCache()
+            // Unduh + cache template terpilih saat Save (best-effort — kegagalan
+            // jaringan tidak menggagalkan penyimpanan; landing punya fallback).
+            dto.feTemplate?.let { slug -> runCatching { feCatalog.ensure(slug) } }
             call.sessions.set(session.withFlash("success", "Save Setting Success."))
             call.respondRedirect("/admin/v1/setting")
         }
 
         namedGet("admin.v1.setting.fe_preview", "/admin/v1/setting/fe-preview/{slug}") {
+            call.requireAuthenticated()
             val slug = call.parameters["slug"] ?: return@namedGet call.respond(HttpStatusCode.BadRequest)
 
-            // Validate slug pattern (anti-SSRF)
-            val slugPattern = Regex("^([a-z]+(?:-[a-z]+)*)-([0-9]{3})-([a-z0-9-]+)$")
-            if (!slugPattern.matches(slug)) {
+            // Validasi pola slug (anti-SSRF) sebelum menyentuh katalog.
+            if (!isValidFeSlug(slug)) {
                 call.respond(HttpStatusCode.BadRequest, "Invalid slug")
                 return@namedGet
             }
 
-            val html = settingService.previewTemplate(slug)
+            val html = feCatalog.previewHtml(slug)
             call.respondText(html, ContentType.Text.Html)
         }
     }

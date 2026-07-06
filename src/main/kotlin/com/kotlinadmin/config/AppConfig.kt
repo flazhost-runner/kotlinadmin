@@ -14,6 +14,8 @@ data class AppConfig(
     val bcryptRounds: Int,
     val otpExpiryMinutes: Long,
     val defaultPageSize: Int,
+    val feTemplateRemote: Boolean,
+    val feTemplateCacheDir: String,
     val storage: StorageConfig,
     val mail: MailConfig,
     val db: DbConfig,
@@ -59,6 +61,11 @@ data class AppConfig(
                 bcryptRounds = config.propertyOrNull("app.bcryptRounds")?.getString()?.toIntOrNull() ?: 10,
                 otpExpiryMinutes = config.propertyOrNull("app.otpExpiryMinutes")?.getString()?.toLongOrNull() ?: 10L,
                 defaultPageSize = config.propertyOrNull("app.defaultPageSize")?.getString()?.toIntOrNull() ?: 10,
+                // Katalog frontend template: fetch live dari GitHub (matikan di test/offline).
+                feTemplateRemote = config.propertyOrNull("app.feTemplateRemote")?.getString()
+                    ?.toBooleanStrictOrNull() ?: true,
+                feTemplateCacheDir = config.propertyOrNull("app.feTemplateCacheDir")?.getString()
+                    ?: "storage/fe/templates",
                 storage = StorageConfig(
                     driver = config.propertyOrNull("storage.driver")?.getString() ?: "local",
                     accessKeyId = config.propertyOrNull("storage.accessKeyId")?.getString() ?: "",

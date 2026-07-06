@@ -29,12 +29,18 @@ data class ThemeData(
     )
 }
 
+// 9 palet kanonik — hex persis `@flazhost-nodeadmin/core` THEMES
+// (urutan kunci NodeAdmin: Blue default dulu, lalu alfabetis).
 val THEMES: List<ThemeData> = listOf(
-    ThemeData("Blue", "#3B82F6", "#1D4ED8", "#EFF6FF", "#1E3A5F"),
-    ThemeData("Purple", "#8B5CF6", "#6D28D9", "#F5F3FF", "#4C1D95"),
-    ThemeData("Green", "#10B981", "#065F46", "#ECFDF5", "#064E3B"),
-    ThemeData("Orange", "#F59E0B", "#B45309", "#FFFBEB", "#78350F"),
-    ThemeData("Red", "#EF4444", "#B91C1C", "#FEF2F2", "#7F1D1D")
+    ThemeData("Blue", "#3B82F6", "#60A5FA", "#DBEAFE", "#1E40AF"),
+    ThemeData("Black", "#374151", "#4B5563", "#6B7280", "#1F2937"),
+    ThemeData("Brown", "#A16207", "#D97706", "#FEF3C7", "#78350F"),
+    ThemeData("Green", "#10B981", "#34D399", "#D1FAE5", "#047857"),
+    ThemeData("Grey", "#6B7280", "#9CA3AF", "#E5E7EB", "#374151"),
+    ThemeData("Orange", "#F59E0B", "#FBBF24", "#FEF3C7", "#D97706"),
+    ThemeData("Purple", "#8B5CF6", "#A78BFA", "#F3E8FF", "#6D28D9"),
+    ThemeData("Red", "#EF4444", "#F87171", "#FECACA", "#B91C1C"),
+    ThemeData("Yellow", "#F59E0B", "#FCD34D", "#FEF3C7", "#D97706")
 )
 
 fun getTheme(name: String): ThemeData =

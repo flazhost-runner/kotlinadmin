@@ -34,14 +34,8 @@ fun Application.authModule() {
 
     routing {
         // ── Public web routes ────────────────────────────────────────────────
-        namedGet("web.home.root", "/") {
-            call.respondView("home/index.ftl")
-        }
-
-        namedGet("web.home.index", "/home") {
-            call.respondView("home/index.ftl")
-        }
-
+        // Landing `/` + `/home` terdaftar di modules/home/routes/HomeRoutes.kt —
+        // render mengikuti setting.fe_template (paritas NodeAdmin/GoAdmin).
         namedGet("web.auth.login", "/auth/login") {
             val existing = call.sessions.get<UserSession>()
             if (existing != null) {

@@ -92,35 +92,58 @@
           </div>
         </div>
 
-        <!-- Frontend Template -->
-        <input type="hidden" id="fe_template_input" name="fe_template" value="${setting.fe_template!""}">
+        <!-- Frontend Template (katalog opentailwind — paritas NodeAdmin/GoAdmin) -->
+        <input type="hidden" id="fe_template_input" name="fe_template" value="${fe_active!setting.fe_template!""}">
         <div class="tw-card p-6 mb-6">
           <div class="flex items-center gap-2 mb-1">
             <i class="fas fa-window-maximize" style="color:var(--primary)"></i>
             <h2 class="text-lg font-semibold" style="color:var(--primary)">Frontend Template</h2>
           </div>
-          <p class="text-sm text-gray-500 mb-3">Choose a frontend landing page template. It will be downloaded and applied on Save.</p>
+          <p class="text-sm text-gray-500 mb-3">
+            Pick a public landing design from
+            <a href="https://github.com/lindoai/opentailwind" target="_blank" class="underline">opentailwind</a>
+            (${fe_total!0} templates). Click <b>Preview</b> for full view. The selected template is
+            downloaded &amp; cached on <b>Save</b>. See it on the
+            <a href="/" target="_blank" class="underline" style="color:var(--primary)">landing page ↗</a>.
+          </p>
           <form id="fe_search" method="GET" action="/admin/v1/setting"></form>
           <div class="d-flex flex-wrap gap-2 mb-3">
-            <input form="fe_search" type="text" name="q_name" placeholder="Search templates…" class="form-control" style="max-width:200px">
+            <input form="fe_search" type="text" name="fe_search" value="${fe_search!""}" placeholder="Search templates…" class="form-control" style="max-width:220px">
+            <select form="fe_search" name="fe_category" class="form-control" style="max-width:200px">
+              <option value="">All categories</option>
+              <#list (fe_categories![]) as c>
+              <option value="${c}" <#if (fe_category!"") == c>selected</#if>>${c}</option>
+              </#list>
+            </select>
             <button form="fe_search" type="submit" class="btn btn-success btn-sm"><i class="fas fa-search me-1"></i> Search</button>
             <a href="/admin/v1/setting" class="btn btn-danger btn-sm"><i class="fas fa-times me-1"></i> Reset</a>
           </div>
-          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            <#assign feOptions = ["agency-consulting-002-creative-agency","portfolio-001-minimal","corporate-003-professional","landing-004-startup","saas-005-saas-landing","ecommerce-001-online-shop"]>
-            <#list feOptions as fe>
-            <div class="fe-card" data-slug="${fe}">
-              <div class="fe-swatch rounded-xl overflow-hidden border-2 <#if (setting.fe_template!"") == fe>border-gray-900<#else>border-gray-300</#if>" style="box-shadow:0 2px 8px rgba(0,0,0,.12)">
-                <div class="fe-thumb fe-preview-trigger bg-gray-100 d-flex align-items-center justify-content-center" style="height:80px">
-                  <i class="fas fa-image fa-2x text-gray-300"></i>
+
+          <#if !(fe_catalog?has_content)>
+          <div class="text-center text-gray-400 py-10"><i class="fas fa-search fa-2x mb-2"></i><p>No template matches your search.</p></div>
+          </#if>
+
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            <#list (fe_catalog![]) as t>
+            <#assign feActiveCard = (fe_active!"") == t.slug>
+            <div class="fe-card block" data-slug="${t.slug}">
+              <div class="fe-swatch rounded-xl overflow-hidden border-2 transition <#if feActiveCard>border-gray-900<#else>border-gray-300</#if>" style="box-shadow:0 2px 8px rgba(0,0,0,.12)">
+                <div class="fe-thumb fe-preview-trigger relative bg-gray-100 cursor-pointer group" data-slug="${t.slug}" data-name="${t.name}"
+                     style="height:140px;overflow:hidden;border-bottom:1px solid #d1d5db;border-top-left-radius:.7rem;border-top-right-radius:.7rem;transform:translateZ(0)"
+                     data-preview-url="/admin/v1/setting/fe-preview/${t.slug}">
+                  <div class="fe-thumb-placeholder absolute inset-0 flex items-center justify-center text-gray-300"><i class="fas fa-spinner fa-spin"></i></div>
+                  <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition" style="background:rgba(0,0,0,.45);pointer-events:none">
+                    <span class="text-white text-sm font-semibold"><i class="fas fa-eye me-1"></i> Preview</span>
+                  </div>
                 </div>
                 <div class="bg-white py-2 px-3">
                   <div class="d-flex align-items-center justify-content-between">
-                    <span class="text-xs fw-semibold text-gray-800 text-truncate">${fe}</span>
-                    <i class="fas fa-check-circle fe-check<#if (setting.fe_template!"") != fe> hidden</#if>" style="color:var(--primary)"></i>
+                    <span class="text-sm fw-semibold text-gray-800 text-truncate" title="${t.name}">${t.name}</span>
+                    <i class="fas fa-check-circle fe-check<#if !feActiveCard> hidden</#if>" style="color:var(--primary)"></i>
                   </div>
-                  <button type="button" class="fe-select btn btn-sm w-100 mt-2 fw-bold <#if (setting.fe_template!"") == fe>btn-primary-tw<#else>btn-outline-dark</#if>" style="font-size:11px">
-                    <#if (setting.fe_template!"") == fe>
+                  <span class="text-xs text-gray-400">${t.category}</span>
+                  <button type="button" class="fe-select btn btn-sm w-100 mt-2 fw-bold <#if feActiveCard>btn-primary-tw<#else>btn-outline-dark</#if>" style="font-size:11px">
+                    <#if feActiveCard>
                     <i class="fas fa-check me-1"></i> TERPILIH
                     <#else>
                     <i class="fas fa-hand-pointer me-1"></i> PILIH
@@ -131,6 +154,22 @@
             </div>
             </#list>
           </div>
+
+          <#if (fe_last_page!1) gt 1>
+          <#assign fePg = fe_page!1, feLast = fe_last_page!1>
+          <#assign feWinStart = [1, fePg - 2]?max, feWinEnd = [feLast, fePg + 2]?min>
+          <div class="d-flex justify-content-center mt-5">
+            <nav><ul class="pagination">
+              <#if (fePg > 1)><li class="page-item"><a class="page-link" href="?fe_page=${fePg - 1}&fe_search=${fe_search!""}&fe_category=${fe_category!""}">Previous</a></li></#if>
+              <#if (feWinStart > 1)><li class="page-item"><a class="page-link" href="?fe_page=1&fe_search=${fe_search!""}&fe_category=${fe_category!""}">1</a></li><li class="page-item disabled"><span class="page-link">…</span></li></#if>
+              <#list feWinStart..feWinEnd as pg>
+              <li class="page-item <#if pg == fePg>active</#if>"><a class="page-link" href="?fe_page=${pg}&fe_search=${fe_search!""}&fe_category=${fe_category!""}">${pg}</a></li>
+              </#list>
+              <#if (feWinEnd < feLast)><li class="page-item disabled"><span class="page-link">…</span></li><li class="page-item"><a class="page-link" href="?fe_page=${feLast}&fe_search=${fe_search!""}&fe_category=${fe_category!""}">${feLast}</a></li></#if>
+              <#if (fePg < feLast)><li class="page-item"><a class="page-link" href="?fe_page=${fePg + 1}&fe_search=${fe_search!""}&fe_category=${fe_category!""}">Next</a></li></#if>
+            </ul></nav>
+          </div>
+          </#if>
         </div>
 
         <!-- Logo / Images -->
@@ -239,17 +278,50 @@ function applyThemePreview(radio) {
   if (icon) icon.classList.remove('hidden');
 }
 
-// FE template selection (inline cards)
-var feInput = document.getElementById('fe_template_input');
-document.querySelectorAll('.fe-select').forEach(function(btn) {
-  btn.addEventListener('click', function() {
-    var slug = this.closest('.fe-card').getAttribute('data-slug');
+// ── FE template switcher: lazy thumbnail + preview modal + pilihan persist ──
+// (replika NodeAdmin setting switcher, via port RustAdmin/GoAdmin)
+(function () {
+  var LS_PREFIX = 'fe_tpl_html:', LS_SEL = 'fe_tpl_selected';
+  var feInput = document.getElementById('fe_template_input');
+  var savedSel = localStorage.getItem(LS_SEL);
+  if (savedSel && feInput) feInput.value = savedSel;
+
+  function forceLight(html) {
+    var inject = '<meta name="color-scheme" content="light">' +
+      '<style>:root{color-scheme:light !important}</style>';
+    if (/<head[^>]*>/i.test(html)) { return html.replace(/<head[^>]*>/i, function (m) { return m + inject; }); }
+    return inject + html;
+  }
+  function getHtml(slug, url) {
+    var cached = null; try { cached = localStorage.getItem(LS_PREFIX + slug); } catch (e) {}
+    if (cached) return Promise.resolve(cached);
+    return fetch(url, { credentials: 'same-origin' })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+      .then(function (html) { try { localStorage.setItem(LS_PREFIX + slug, html); } catch (e) {} return html; });
+  }
+  function renderThumb(box) {
+    var slug = box.getAttribute('data-slug'), url = box.getAttribute('data-preview-url');
+    getHtml(slug, url).then(function (html) {
+      var ph = box.querySelector('.fe-thumb-placeholder'); if (ph) ph.remove();
+      var ifr = document.createElement('iframe');
+      ifr.setAttribute('scrolling', 'no'); ifr.setAttribute('loading', 'lazy');
+      var DESIGN_W = 1280, scale = (box.clientWidth || 280) / DESIGN_W;
+      ifr.style.cssText = 'width:' + DESIGN_W + 'px;height:' + Math.ceil(140 / scale) + 'px;border:0;transform:scale(' + scale + ');transform-origin:top left;pointer-events:none';
+      ifr.srcdoc = forceLight(html); box.appendChild(ifr);
+    }).catch(function () { var ph = box.querySelector('.fe-thumb-placeholder'); if (ph) ph.innerHTML = '<i class="fas fa-image fa-2x"></i>'; });
+  }
+  var thumbs = document.querySelectorAll('.fe-thumb');
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (entries) { entries.forEach(function (en) { if (en.isIntersecting) { renderThumb(en.target); io.unobserve(en.target); } }); }, { rootMargin: '200px' });
+    thumbs.forEach(function (t) { io.observe(t); });
+  } else { thumbs.forEach(renderThumb); }
+
+  function selectSlug(slug) {
     if (feInput) feInput.value = slug;
-    document.querySelectorAll('.fe-card').forEach(function(c) {
-      var isA = c.getAttribute('data-slug') === slug;
-      var sw = c.querySelector('.fe-swatch');
-      var ch = c.querySelector('.fe-check');
-      var b  = c.querySelector('.fe-select');
+    try { localStorage.setItem(LS_SEL, slug); } catch (e) {}
+    document.querySelectorAll('.fe-card').forEach(function (card) {
+      var isA = card.getAttribute('data-slug') === slug;
+      var sw = card.querySelector('.fe-swatch'), ch = card.querySelector('.fe-check'), b = card.querySelector('.fe-select');
       if (sw) { sw.classList.toggle('border-gray-900', isA); sw.classList.toggle('border-gray-300', !isA); }
       if (ch) ch.classList.toggle('hidden', !isA);
       if (b) {
@@ -260,8 +332,34 @@ document.querySelectorAll('.fe-select').forEach(function(btn) {
           : '<i class="fas fa-hand-pointer me-1"></i> PILIH';
       }
     });
-  });
-});
+  }
+  document.querySelectorAll('.fe-select').forEach(function (b) { b.addEventListener('click', function () { selectSlug(this.closest('.fe-card').getAttribute('data-slug')); }); });
+  if (feInput && feInput.value) selectSlug(feInput.value);
+
+  var modal = document.getElementById('fe-preview-modal'), frame = document.getElementById('fe-preview-frame'), title = document.getElementById('fe-preview-title');
+  function openModal(slug, name, url) {
+    title.textContent = name; frame.srcdoc = '<div style="font-family:sans-serif;padding:40px">Loading…</div>';
+    modal.classList.remove('hidden'); modal.classList.add('flex');
+    getHtml(slug, url).then(function (html) { frame.srcdoc = forceLight(html); }).catch(function () { frame.srcdoc = '<p style="padding:40px;font-family:sans-serif">Failed to load preview.</p>'; });
+  }
+  function closeModal() { modal.classList.add('hidden'); modal.classList.remove('flex'); frame.srcdoc = ''; }
+  document.querySelectorAll('.fe-preview-trigger').forEach(function (b) { b.addEventListener('click', function () { openModal(this.getAttribute('data-slug'), this.getAttribute('data-name'), this.getAttribute('data-preview-url')); }); });
+  var closeBtn = document.getElementById('fe-preview-close');
+  if (closeBtn) closeBtn.addEventListener('click', closeModal);
+  if (modal) modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
+})();
 </script>
+
+<#-- Modal preview FE template (full view) -->
+<div id="fe-preview-modal" class="hidden fixed inset-0 z-50 items-center justify-center" style="background:rgba(0,0,0,.6)">
+  <div class="bg-white rounded-xl overflow-hidden shadow-2xl" style="width:92vw;height:90vh;display:flex;flex-direction:column">
+    <div class="flex items-center justify-between px-4 py-3 border-b">
+      <h3 id="fe-preview-title" class="font-bold text-gray-800">Preview</h3>
+      <button id="fe-preview-close" type="button" class="btn btn-sm btn-danger"><i class="fas fa-times"></i> Close</button>
+    </div>
+    <iframe id="fe-preview-frame" class="flex-1 w-full" style="border:0"></iframe>
+  </div>
+</div>
 </body>
 </html>
