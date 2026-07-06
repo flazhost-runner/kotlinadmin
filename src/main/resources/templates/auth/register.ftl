@@ -8,7 +8,9 @@
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
   <div class="tw-card max-w-md w-full p-8">
     <div class="mb-6 text-center">
-      <img src="${(setting.logo)!""}" alt="logo" width="48" height="48" class="mx-auto mb-3 rounded-lg">
+      <#if (setting.logo)?has_content>
+      <img src="${setting.logo}" alt="logo" width="48" height="48" class="mx-auto mb-3 rounded-lg">
+      </#if>
       <h1 class="text-2xl font-bold text-gray-800">Create Account</h1>
       <p class="text-gray-500 text-sm mt-1">Fill in the details below to register</p>
     </div>

@@ -55,7 +55,9 @@ tailwind.config = {
   .table-bordered { @apply border border-gray-200; }
   .table-bordered th, .table-bordered td { @apply border border-gray-200; }
   .table-hover tbody tr:hover { @apply bg-gray-50; }
-  .align-middle td, .align-middle th { @apply align-middle; }
+  <#-- CSS mentah, BUKAN `@apply align-middle` — self-reference = circular dependency
+       yang membatalkan seluruh kompilasi Play CDN (paritas NodeAdmin head.ejs). -->
+  .align-middle td, .align-middle th { vertical-align: middle; }
   .tw-card { @apply bg-white rounded-lg shadow-sm border border-gray-100; }
   .badge { @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium; }
   .text-bg-primary { background-color: var(--primary); @apply text-white; }
@@ -103,7 +105,6 @@ tailwind.config = {
   .form-check { @apply flex items-center gap-2; }
   .form-check-label { @apply text-sm text-gray-600 cursor-pointer; }
   .small { @apply text-sm; }
-  .sr-only { @apply sr-only; }
   .dropdown-divider { @apply border-t border-gray-200 my-1; }
   .sidebar-gradient { background: linear-gradient(180deg, var(--theme-dark) 0%, var(--primary) 100%); }
   .nav-link-tw { @apply flex items-center gap-3 px-4 py-2.5 text-white/80 hover:text-white hover:bg-white/10 rounded-lg mx-2 text-sm transition-all; }
@@ -119,9 +120,6 @@ tailwind.config = {
   .justify-content-between { @apply justify-between; }
   .me-2 { @apply mr-2; }
   .ms-2 { @apply ml-2; }
-  .mb-3 { @apply mb-3; }
-  .mb-4 { @apply mb-4; }
-  .mt-4 { @apply mt-4; }
   .g-3 { @apply gap-3; }
   select.form-control { @apply appearance-none; }
   .btn-primary-tw { background-color: var(--primary); @apply text-white px-6 py-2 rounded font-medium hover:opacity-90 transition-opacity cursor-pointer border-0; }
