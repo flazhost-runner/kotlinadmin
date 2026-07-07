@@ -286,3 +286,11 @@ cucumber.glue=com.kotlinadmin.bdd.steps
 - **db-compat** — migration test di matrix SQLite + MySQL + PostgreSQL
 
 > E2E (browser) dijalankan lokal saja, bukan di CI.
+
+## Postman (manual API testing)
+
+Collection: [`docs/postman/KotlinAdmin.postman_collection.json`](postman/KotlinAdmin.postman_collection.json).
+
+1. Import collection ke Postman.
+2. Set variable `base_url` = `http://localhost:8002` (default `APP_PORT` di `application.conf`).
+3. Jalankan `POST /api/v1/auth/login` — token otomatis tersimpan ke variable `access_token` untuk request lain.

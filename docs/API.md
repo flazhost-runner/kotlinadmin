@@ -4,6 +4,9 @@ Base URL: `/api/v1`
 Auth: `Authorization: Bearer <JWT>` (dapatkan via `POST /api/v1/auth/login`)
 Content-Type: `application/json`
 
+> **Postman collection:** [`docs/postman/KotlinAdmin.postman_collection.json`](postman/KotlinAdmin.postman_collection.json).
+> Import ke Postman, lalu set variable `base_url` (default `http://localhost:8002` — sesuai `APP_PORT` di `application.conf`).
+
 ---
 
 ## Auth
