@@ -332,3 +332,73 @@ Upgrade API-only → Full: `./gradlew addUi`
 | `call.respondView(template, model)` | `core/helpers/ViewHelper.kt` | render FTL + inject locals |
 | `call.requireAuthenticated()` | `core/routing/AuthHelper.kt` | cek session atau redirect login |
 | `call.checkAccess(name, method)` | `core/routing/AuthHelper.kt` | RBAC check atau throw ForbiddenError |
+
+---
+
+## Storage & switching backends
+
+Adapter penyimpanan file — mirror desain `FileService` NodeAdmin. **DB menyimpan
+_key_ object** (mis. `media/1720000000_logo.png`), **URL render dibangun saat
+request** via `IStorageService.url(key)`. Berpindah backend cukup ubah `.env` +
+restart — **tanpa** ubah kode atau template.
+
+**Komponen** (`core/storage/`):
+
+| Berkas | Peran |
+|--------|-------|
+| `IStorageService` | kontrak: `put` / `url` / `list` / `delete` / `localMount` |
+| `LocalStorageService` | driver filesystem lokal |
+| `ObjectStorageService` | driver `oss` (Alibaba) & `s3` (AWS / S3-compatible), tanpa SDK — signing manual (S3 SigV4, OSS V1) via `java.net.http.HttpClient` |
+
+Di-inject Koin (`di/AppModule.kt`) berdasar `STORAGE_DRIVER`. `MediaService` dan
+helper template `getFile(key)` (`ViewHelper.storageUrl`) memakainya; keduanya
+tidak tahu driver mana yang aktif.
+
+**URL render per driver** (`url(key)`):
+
+| `STORAGE_DRIVER` | URL yang dirender | Penyajian |
+|------------------|-------------------|-----------|
+| `local` (default) | `/storage/<key>` (path relatif, prefix stabil) | route static `staticFiles("/storage", baseDir)` didaftarkan **hanya** saat driver=local (`Application.configureRouting`) |
+| `s3` | presigned URL absolut (SigV4, TTL 6 jam) | langsung dari bucket (privat) |
+| `oss` | URL publik virtual-hosted absolut `https://<bucket>.<endpoint>/<key>` | langsung dari OSS |
+
+Prefix URL `/storage` **dipisah** dari path filesystem: `STORAGE_BASE_PATH` boleh
+absolut (mis. `/data/uploads` di Docker) namun URL tetap `/storage/<key>` yang
+valid — bukan `//data/uploads/...`.
+
+**Contoh `.env`:**
+
+```env
+# Lokal (default) — tanpa kredensial
+STORAGE_DRIVER=local
+STORAGE_BASE_PATH=uploads
+
+# AWS S3 / S3-compatible (MinIO, R2, B2)
+STORAGE_DRIVER=s3
+STORAGE_ACCESS_KEY_ID=...
+STORAGE_SECRET_ACCESS_KEY=...
+STORAGE_BUCKET=my-bucket
+STORAGE_REGION=ap-southeast-1
+STORAGE_ENDPOINT=            # kosong = AWS; isi = path-style (MinIO/R2)
+
+# Alibaba OSS
+STORAGE_DRIVER=oss
+STORAGE_ACCESS_KEY_ID=...
+STORAGE_SECRET_ACCESS_KEY=...
+STORAGE_BUCKET=my-bucket
+STORAGE_ENDPOINT=oss-ap-southeast-5.aliyuncs.com
+```
+
+**Catatan operasional:**
+
+- **DB menyimpan key, bukan URL.** Berpindah driver tidak butuh migrasi data —
+  URL dibangun ulang saat render. (URL `http(s)://` absolut lama diteruskan
+  apa adanya oleh `getFile` demi kompatibilitas.)
+- **Migrasi konten** saat pindah backend: salin object apa adanya, key dipertahankan.
+  - ke S3: `aws s3 sync ./uploads s3://my-bucket/`
+  - ke OSS: `ossutil cp -r ./uploads oss://my-bucket/`
+- **Local di produksi bersifat ephemeral** (hilang saat kontainer di-recreate).
+  Untuk driver=local di produksi, mount **persistent volume** ke `STORAGE_BASE_PATH`
+  (mis. `-v /data/uploads:/app/uploads`), atau gunakan `s3`/`oss`.
+- **Konten unggahan di-git-ignore** (`/uploads/*`, `/storage/*`); folder dijaga
+  via `.gitkeep`.

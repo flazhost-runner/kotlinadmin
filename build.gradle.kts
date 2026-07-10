@@ -49,6 +49,7 @@ dependencies {
     implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
     implementation("io.ktor:ktor-server-cors:$ktorVersion")
     implementation("io.ktor:ktor-server-compression:$ktorVersion")
+    implementation("io.ktor:ktor-server-forwarded-header:$ktorVersion")
 
     // Exposed ORM
     implementation("org.jetbrains.exposed:exposed-core:$exposedVersion")

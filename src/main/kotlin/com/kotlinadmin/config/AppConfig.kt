@@ -68,6 +68,7 @@ data class AppConfig(
                     ?: "storage/fe/templates",
                 storage = StorageConfig(
                     driver = config.propertyOrNull("storage.driver")?.getString() ?: "local",
+                    basePath = config.propertyOrNull("storage.basePath")?.getString() ?: "uploads",
                     accessKeyId = config.propertyOrNull("storage.accessKeyId")?.getString() ?: "",
                     secretAccessKey = config.propertyOrNull("storage.secretAccessKey")?.getString() ?: "",
                     endpoint = config.propertyOrNull("storage.endpoint")?.getString() ?: "",
@@ -113,6 +114,7 @@ data class AppConfig(
 
 data class StorageConfig(
     val driver: String,
+    val basePath: String,
     val accessKeyId: String,
     val secretAccessKey: String,
     val endpoint: String,

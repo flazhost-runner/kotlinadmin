@@ -2,6 +2,9 @@ package com.kotlinadmin.di
 
 import com.kotlinadmin.config.AppConfig
 import com.kotlinadmin.config.RedisManager
+import com.kotlinadmin.core.storage.IStorageService
+import com.kotlinadmin.core.storage.LocalStorageService
+import com.kotlinadmin.core.storage.ObjectStorageService
 import com.kotlinadmin.modules.access.services.IPermissionService
 import com.kotlinadmin.modules.access.services.IRoleService
 import com.kotlinadmin.modules.access.services.IUserService
@@ -28,6 +31,16 @@ fun appModule(config: AppConfig) = module {
     single { config }
     single { RedisManager }
 
+    // Storage adapter — pilih driver dari .env (STORAGE_DRIVER). Berpindah
+    // local ↔ oss/s3 cukup lewat konfigurasi, tanpa ubah kode pemakai.
+    single<IStorageService> {
+        if (config.storage.driver == "local") {
+            LocalStorageService(config.storage.basePath)
+        } else {
+            ObjectStorageService(config.storage)
+        }
+    }
+
     single<IAuthService> { AuthService(get<RedisManager>(), config.bcryptRounds, config.otpExpiryMinutes) }
     single<IUserService> { UserService() }
     single<IRoleService> { RoleService() }
@@ -37,5 +50,5 @@ fun appModule(config: AppConfig) = module {
     single<IProfileService> { ProfileService() }
     single<IHomeService> { HomeService() }
     single<IFeCatalogService> { FeCatalogService(config.feTemplateRemote, config.feTemplateCacheDir) }
-    single<IMediaService> { MediaService() }
+    single<IMediaService> { MediaService(get()) }
 }

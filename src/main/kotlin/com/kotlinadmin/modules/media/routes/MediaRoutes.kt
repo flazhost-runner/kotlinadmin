@@ -85,16 +85,7 @@ fun Application.mediaModule() {
             mediaService.delete(key)
             call.respondJson(message = "File deleted.")
         }
-
-        // GET /admin/v1/media/file/{name} — serve file
-        get("/admin/v1/media/file/{name}") {
-            val name = call.parameters["name"]?.replace(Regex("[^a-zA-Z0-9._-]"), "") ?: ""
-            val file = java.io.File("uploads/media/$name")
-            if (file.exists()) {
-                call.respondFile(file)
-            } else {
-                call.respond(HttpStatusCode.NotFound)
-            }
-        }
+        // File disajikan oleh route static `/storage/<key>` (driver=local) atau
+        // langsung dari URL absolut oss/s3 — lihat IStorageService.url().
     }
 }

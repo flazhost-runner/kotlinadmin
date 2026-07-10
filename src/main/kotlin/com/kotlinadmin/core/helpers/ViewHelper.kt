@@ -5,6 +5,7 @@ import com.kotlinadmin.core.errors.getTheme
 import com.kotlinadmin.core.plugins.generateCsrfToken
 import com.kotlinadmin.core.session.UserSession
 import com.kotlinadmin.core.session.clearFlashAndErrors
+import com.kotlinadmin.core.storage.IStorageService
 import com.kotlinadmin.modules.access.models.Permissions
 import com.kotlinadmin.modules.access.models.Roles
 import com.kotlinadmin.modules.access.models.RolesPermissions
@@ -32,6 +33,18 @@ import kotlinx.serialization.json.put
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.koin.ktor.ext.getKoin
+
+/**
+ * URL render untuk key storage: local → `/storage/<key>`, oss/s3 → URL absolut.
+ * URL `http(s)://` absolut (data lama) diteruskan apa adanya; kosong → "".
+ */
+private fun ApplicationCall.storageUrl(path: String): String =
+    if (path.isBlank() || path.startsWith("http://") || path.startsWith("https://")) {
+        path
+    } else {
+        application.getKoin().get<IStorageService>().url(path)
+    }
 
 suspend fun ApplicationCall.respondView(
     templatePath: String,
@@ -99,9 +112,9 @@ suspend fun ApplicationCall.respondView(
                 } catch (_: Exception) { false }
             }
         },
+        // getFile(key) → URL render sesuai driver storage aktif (lihat storageUrl).
         "getFile" to TemplateMethodModelEx { args ->
-            val path = (args?.getOrNull(0) as? TemplateScalarModel)?.asString ?: ""
-            "/uploads${if (path.startsWith("/")) path else "/$path"}"
+            storageUrl((args?.getOrNull(0) as? TemplateScalarModel)?.asString ?: "")
         }
     )
     model.putAll(extraModel)

@@ -19,6 +19,7 @@ import com.kotlinadmin.core.session.RedisSessionStorage
 import com.kotlinadmin.core.session.UserSession
 import com.kotlinadmin.core.session.withErrors
 import com.kotlinadmin.core.session.withFlash
+import com.kotlinadmin.core.storage.IStorageService
 import com.kotlinadmin.di.appModule
 import com.kotlinadmin.modules.access.routes.accessApiModule
 import com.kotlinadmin.modules.access.routes.accessWebModule
@@ -50,6 +51,7 @@ import io.ktor.server.plugins.compression.Compression
 import io.ktor.server.plugins.compression.gzip
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.cors.routing.CORS
+import io.ktor.server.plugins.forwardedheaders.XForwardedHeaders
 import io.ktor.server.plugins.ratelimit.RateLimit
 import io.ktor.server.plugins.ratelimit.RateLimitName
 import io.ktor.server.plugins.statuspages.StatusPages
@@ -65,6 +67,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import org.koin.ktor.ext.get
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
 import kotlin.time.Duration.Companion.seconds
@@ -78,6 +81,12 @@ fun Application.module() {
 
     RedisManager.init(appConfig.redis)
     DatabaseConfig.setup(appConfig.db)
+
+    // Di belakang reverse proxy TLS-terminating (CapRover/nginx): percayai
+    // X-Forwarded-* supaya `call.request.origin.scheme` = https. Tanpa ini scheme
+    // terbaca http → URL absolut & flag cookie `secure` salah. Harus dipasang
+    // paling awal, sebelum plugin lain (Sessions/Auth) membaca origin.
+    install(XForwardedHeaders)
 
     install(Koin) {
         slf4jLogger()
@@ -111,6 +120,7 @@ fun Application.module() {
         }
     }
 
+    val cookieSecure = !developmentMode
     if (appConfig.isFullMode) {
         install(Sessions) {
             val sessionTtlSeconds = appConfig.sessionTtlHours * SECONDS_PER_HOUR
@@ -121,6 +131,10 @@ fun Application.module() {
             }
             cookie<UserSession>("KOTLINADMIN_SESSION", storage = sessionStorage) {
                 cookie.httpOnly = true
+                // Cookie sesi ditandai Secure di produksi (di belakang proxy TLS
+                // browser tetap melihat https, jadi cookie diterima). Di dev
+                // (developmentMode) tetap non-secure agar login http localhost jalan.
+                cookie.secure = cookieSecure
                 cookie.maxAgeInSeconds = sessionTtlSeconds
                 cookie.path = "/"
                 serializer = object : io.ktor.server.sessions.SessionSerializer<UserSession> {
@@ -257,11 +271,17 @@ fun Application.module() {
 }
 
 fun Application.configureRouting(config: AppConfig) {
+    // Driver storage lokal → sajikan file unggahan pada prefix URL stabil
+    // (mis. /storage), dipisah dari path filesystem. Object storage (oss/s3)
+    // memakai URL absolut, jadi tidak ada mount lokal. Cukup .env untuk berpindah.
+    val storageMount = get<IStorageService>().localMount()
+
     routing {
         staticResources("/assets", "static")
         staticResources("/be", "static/be")
-        // File upload (logo/icon/login_image) — getFile() menghasilkan URL /uploads/*.
-        staticFiles("/uploads", java.io.File("uploads"))
+        if (storageMount != null) {
+            staticFiles(storageMount.first, storageMount.second)
+        }
 
         if (config.isFullMode) {
             authModule()

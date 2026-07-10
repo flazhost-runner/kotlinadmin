@@ -27,9 +27,11 @@ logs/
 .env.*
 !.env.example
 
-# Storage / generated content
-storage/
-uploads/
+# Storage / uploaded content — abaikan isi, pertahankan folder via .gitkeep
+/uploads/*
+!/uploads/.gitkeep
+/storage/*
+!/storage/.gitkeep
 public/fe/templates/
 public/fe/templates/_catalog.json
 
