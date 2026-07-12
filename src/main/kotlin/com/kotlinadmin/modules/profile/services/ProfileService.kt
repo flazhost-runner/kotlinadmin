@@ -22,6 +22,7 @@ class ProfileService(private val bcryptRounds: Int = 12) : IProfileService {
         dto.email?.let { user.email = it }
         dto.timezone?.let { user.timezone = it }
         dto.status?.let { user.status = it }
+        dto.picture?.let { user.picture = it }
 
         if (!dto.password.isNullOrBlank()) {
             if (dto.password != dto.passwordConfirm) {

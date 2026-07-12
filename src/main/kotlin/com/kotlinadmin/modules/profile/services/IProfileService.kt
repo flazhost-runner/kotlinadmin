@@ -10,7 +10,9 @@ data class UpdateProfileDto(
     val timezone: String? = null,
     val status: String? = null,
     val password: String? = null,
-    val passwordConfirm: String? = null
+    val passwordConfirm: String? = null,
+    /** Storage key of a newly-uploaded avatar (e.g. `user/<id>.png`); null = keep existing. */
+    val picture: String? = null
 )
 
 interface IProfileService {
