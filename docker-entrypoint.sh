@@ -128,5 +128,5 @@ esac
 # ── 5. Start the server (PID 1 → clean SIGTERM/graceful shutdown) ────────────
 # Flyway migrations + admin seed run inside the app during module init; a DB
 # failure there is fatal by design (schema is required for sessions/auth).
-echo "[entrypoint] Starting KotlinAdmin on 0.0.0.0:${APP_PORT} (DB_URL=$DB_URL)"
+echo "[entrypoint] Starting KotlinAdmin on 0.0.0.0:${APP_PORT} (DB=${DB_URL:-${DB_TYPE:-sqlite} via DB_TYPE})"
 exec java ${JAVA_OPTS:-} -jar /app/app.jar
