@@ -72,6 +72,33 @@ export DB_USERNAME="${DB_USERNAME:-${DB_USER:-}}"
 # Idem: sebagian template memakai DB_DATABASE, platform mengirim DB_NAME.
 export DB_DATABASE="${DB_DATABASE:-${DB_NAME:-}}"
 
+# ── 3b. TLS ke managed MySQL/PostgreSQL (Alibaba RDS) ────────────────────────
+# Server RDS Alibaba HANYA menawarkan pertukaran kunci RSA statis
+# (TLS_RSA_WITH_AES_256_GCM_SHA384); ECDHE ditolak. Sementara JDK 17+ memblokir
+# seluruh TLS_RSA_* lewat jdk.tls.disabledAlgorithms (tidak punya forward secrecy).
+# Hasilnya: JVM gagal handshake ("No appropriate protocol"), padahal OpenSSL
+# (Rust/.NET/Node) menerimanya — makanya hanya app JVM yang terdampak.
+#
+# Menyebut cipher-nya di JDBC URL TIDAK cukup: JSSE menolaknya di level kebijakan.
+# Satu-satunya jalan adalah menimpa security property. Yang dilonggarkan HANYA
+# TLS_RSA_*; TLSv1/1.1, RC4, DES, 3DES, anon, NULL tetap terkunci.
+#
+# Alternatifnya adalah mematikan TLS sama sekali (sslMode=DISABLED) — kredensial dan
+# data melintas polos ke endpoint publik RDS. Kehilangan forward secrecy jauh lebih
+# ringan daripada itu.
+if [ -n "${DB_TYPE:-}" ] && [ "${DB_TYPE}" != "sqlite" ]; then
+    TLS_PROPS="$DATA_DIR/tls-override.properties"
+    mkdir -p "$DATA_DIR" 2>/dev/null || true
+    cat > "$TLS_PROPS" <<'EOF'
+jdk.tls.disabledAlgorithms=SSLv3, TLSv1, TLSv1.1, DTLSv1.0, RC4, DES, \
+    MD5withRSA, DH keySize < 1024, EC keySize < 224, 3DES_EDE_CBC, anon, NULL, \
+    rsa_pkcs1_sha1 usage HandshakeSignature, ecdsa_sha1 usage HandshakeSignature, \
+    dsa_sha1 usage HandshakeSignature
+EOF
+    export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -Djava.security.properties=$TLS_PROPS"
+    echo "[entrypoint] TLS: TLS_RSA_* diaktifkan utk RDS Alibaba (sisanya tetap terkunci)"
+fi
+
 # ── 4. Redis (RedisManager uses REDIS_HOST/REDIS_PORT, not REDIS_URL) ────────
 # Derive host/port from REDIS_URL when explicit host/port are not given, so a
 # managed Redis works by setting either REDIS_URL or REDIS_HOST/REDIS_PORT.
