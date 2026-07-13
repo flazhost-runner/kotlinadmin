@@ -40,29 +40,37 @@ if [ -z "${JWT_SECRET:-}" ]; then
 fi
 export SESSION_SECRET JWT_SECRET
 
-# ── 3. Database (app reads DB_URL / DB_DRIVER / DB_USERNAME / DB_PASSWORD) ───
-# Only the SQLite driver ships in the fat jar, and the Flyway migrations use
-# SQLite syntax — an external Postgres/MySQL cannot work without adding a
-# driver dependency. Warn loudly if someone points DB_URL elsewhere.
-export DB_URL="${DB_URL:-jdbc:sqlite:$DATA_DIR/kotlinadmin.db}"
-export DB_DRIVER="${DB_DRIVER:-org.sqlite.JDBC}"
-case "$DB_URL" in
-    jdbc:sqlite:*)
-        db_file="${DB_URL#jdbc:sqlite:}"
-        case "$db_file" in
-            /*) mkdir -p "$(dirname "$db_file")" 2>/dev/null || true ;;
-        esac
-        ;;
-    *)
-        echo "[entrypoint] WARN: DB_URL=$DB_URL is not SQLite — this image only bundles" >&2
-        echo "[entrypoint] WARN: the sqlite-jdbc driver and SQLite-dialect migrations;" >&2
-        echo "[entrypoint] WARN: boot will likely fail unless a matching driver was added." >&2
-        ;;
-esac
-if [ -n "${DB_HOST:-}" ]; then
-    echo "[entrypoint] WARN: DB_HOST is set but ignored — the app resolves the database" >&2
-    echo "[entrypoint] WARN: via DB_URL only (currently: $DB_URL)." >&2
+# ── 3. Database ──────────────────────────────────────────────────────────────
+# App (AppConfig.resolveDb) sudah pintar: DB_URL eksplisit = override penuh; kalau
+# tidak ada, ia MENYUSUN SENDIRI url dari DB_TYPE + DB_HOST/DB_PORT/DB_DATABASE.
+#
+# Entrypoint versi lama SELALU meng-export DB_URL=jdbc:sqlite:... Karena DB_URL
+# eksplisit menang, app dipaksa ke SQLite dan DB_HOST/DB_TYPE dari platform dibuang —
+# database MySQL yang sudah dibeli user menganggur, dan (setelah driver sqlite dilepas
+# dari jar) app langsung crash: "No database found to handle jdbc:sqlite".
+#
+# Aturan sekarang: DB_URL HANYA di-set kalau memang tidak ada DB terpasang. Begitu
+# platform mengirim DB_TYPE (mysql/postgres), diam saja — biar app yang menyusun.
+if [ -z "${DB_URL:-}" ]; then
+    case "${DB_TYPE:-}" in
+        mysql|mariadb|postgres|postgresql)
+            # Jangan set DB_URL/DB_DRIVER. App menyusunnya dari DB_TYPE + DB_HOST/DB_PORT/DB_DATABASE.
+            echo "[entrypoint] Database: ${DB_TYPE} @ ${DB_HOST:-?}:${DB_PORT:-?}/${DB_DATABASE:-${DB_NAME:-?}}"
+            ;;
+        *)
+            export DB_URL="jdbc:sqlite:$DATA_DIR/kotlinadmin.db"
+            export DB_DRIVER="org.sqlite.JDBC"
+            mkdir -p "$DATA_DIR" 2>/dev/null || true
+            echo "[entrypoint] Database: sqlite @ $DATA_DIR/kotlinadmin.db (tidak ada DB_TYPE)"
+            ;;
+    esac
 fi
+
+# App membaca DB_USERNAME; platform mengirim DB_USER. Samakan supaya kredensial tidak
+# hilang di tengah jalan.
+export DB_USERNAME="${DB_USERNAME:-${DB_USER:-}}"
+# Idem: sebagian template memakai DB_DATABASE, platform mengirim DB_NAME.
+export DB_DATABASE="${DB_DATABASE:-${DB_NAME:-}}"
 
 # ── 4. Redis (RedisManager uses REDIS_HOST/REDIS_PORT, not REDIS_URL) ────────
 # Derive host/port from REDIS_URL when explicit host/port are not given, so a
