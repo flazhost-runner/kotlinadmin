@@ -43,11 +43,14 @@ RUN chmod +x /app/docker-entrypoint.sh && mkdir -p /app/data
 # APP_PORT feeds ktor.deployment.port (application.conf: ${?APP_PORT});
 # the entrypoint also maps CapRover's injected $PORT → APP_PORT.
 # DB_URL / DB_DRIVER are what the app actually reads (see application.conf).
+# JANGAN set DB_URL/DB_DRIVER di sini. ENV terisi sejak image dibangun, sehingga
+# pemeriksaan `[ -z "${DB_URL:-}" ]` di entrypoint SELALU salah → blok pemilihan
+# database dilewati → DB_TYPE/DB_HOST dari platform tidak pernah dilihat, dan app
+# diam-diam memakai SQLite lokal per container (login rusak begitu replika > 1).
+# Default SQLite kini ditentukan entrypoint, HANYA saat DB_TYPE kosong.
 ENV APP_PORT=80 \
     APP_MODE=full \
     APP_NAME=KotlinAdmin \
-    DB_URL=jdbc:sqlite:/app/data/kotlinadmin.db \
-    DB_DRIVER=org.sqlite.JDBC \
     REDIS_URL=redis://127.0.0.1:6379 \
     JAVA_OPTS="-XX:MaxRAMPercentage=75.0"
 
