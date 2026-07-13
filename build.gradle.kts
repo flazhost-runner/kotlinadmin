@@ -1,3 +1,4 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import io.gitlab.arturbosch.detekt.Detekt
 
 plugins {
@@ -67,6 +68,10 @@ dependencies {
     implementation("org.flywaydb:flyway-mysql:$flywayVersion")
     implementation("org.flywaydb:flyway-database-postgresql:$flywayVersion")
 
+    // Connection pool — tier DB managed FlazHost berjatah koneksi sangat ketat
+    // (nano=2 … advance=30) dan jatah itu dibagi ke semua replika.
+    implementation("com.zaxxer:HikariCP:5.1.0")
+
     // DI — Koin
     implementation("io.insert-koin:koin-core:$koinVersion")
     implementation("io.insert-koin:koin-ktor:$koinVersion")
@@ -99,6 +104,17 @@ dependencies {
 
     // Detekt — analysis only, plugin already applied above
     detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.23.7")
+}
+
+// ── fat jar (buildFatJar → Shadow) ───────────────────────────────────────────
+// Shadow MENIMPA file META-INF/services alih-alih menggabungkannya. Dengan tiga driver
+// JDBC dan tiga artifact Flyway, yang bertahan hanya milik artifact terakhir:
+// java.sql.Driver tinggal SQLite, dan plugin Flyway tinggal MySQL — resolver migrasi SQL
+// milik flyway-core ikut hilang. Akibatnya jar produksi gagal boot ("No database found to
+// handle jdbc:...", "No migrations found") walau test hijau, sebab test jalan di classpath
+// biasa, bukan di fat jar.
+tasks.withType<ShadowJar>().configureEach {
+    mergeServiceFiles()
 }
 
 // ── test ─────────────────────────────────────────────────────────────────────

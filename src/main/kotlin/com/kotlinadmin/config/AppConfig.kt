@@ -136,7 +136,9 @@ data class AppConfig(
                 user = config.valueOf("database.user", "DB_USERNAME")
                     ?: config.valueOf("database.user", "DB_USER")
                     ?: "",
-                password = config.valueOf("database.password", "DB_PASSWORD") ?: ""
+                password = config.valueOf("database.password", "DB_PASSWORD") ?: "",
+                maxPool = config.valueOf("database.maxPool", "DB_MAX_POOL")?.toIntOrNull()
+                    ?: DEFAULT_DB_MAX_POOL
             )
         }
 
@@ -191,11 +193,15 @@ data class MailConfig(
     val fromAddress: String
 )
 
+/** Default kecil & aman: tier DB terkecil FlazHost hanya berjatah 2 koneksi, dibagi antar-replika. */
+const val DEFAULT_DB_MAX_POOL = 3
+
 data class DbConfig(
     val url: String,
     val driver: String,
     val user: String,
-    val password: String
+    val password: String,
+    val maxPool: Int = DEFAULT_DB_MAX_POOL
 )
 
 data class RedisConfig(

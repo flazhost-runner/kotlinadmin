@@ -6,38 +6,57 @@ import com.kotlinadmin.modules.access.models.RolesPermissions
 import com.kotlinadmin.modules.access.models.Users
 import com.kotlinadmin.modules.access.models.UsersRoles
 import com.kotlinadmin.modules.setting.models.Settings
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
 import kotlinx.coroutines.Dispatchers
 import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.Transaction
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
+import javax.sql.DataSource
 
 object DatabaseConfig {
+    private const val CONNECTION_TIMEOUT_MS = 10_000L
+    private const val SQLITE_MAX_POOL = 1
+
     fun setup(config: DbConfig) {
-        runFlyway(config)
-        Database.connect(
-            url = config.url,
-            driver = config.driver,
-            user = config.user,
-            password = config.password
-        )
+        // Flyway & Exposed berbagi satu pool: jatah koneksi DB managed sangat ketat
+        // (tier terkecil = 2, dibagi ke SEMUA replika), jadi migrasi tidak boleh
+        // membuka koneksi sendiri di luar batas pool.
+        val dataSource = buildDataSource(config)
+        runFlyway(dataSource)
+        Database.connect(dataSource)
     }
 
-    private fun runFlyway(config: DbConfig) {
+    private fun buildDataSource(config: DbConfig): HikariDataSource {
+        val isSqlite = config.driver.contains("sqlite", ignoreCase = true)
+        val hikari = HikariConfig().apply {
+            jdbcUrl = config.url
+            driverClassName = config.driver
+            username = config.user
+            password = config.password
+            // SQLite mengunci seluruh file per penulis; >1 koneksi hanya menghasilkan
+            // SQLITE_BUSY, bukan paralelisme.
+            maximumPoolSize = if (isSqlite) SQLITE_MAX_POOL else config.maxPool
+            minimumIdle = 1
+            connectionTimeout = CONNECTION_TIMEOUT_MS
+
+            // MySQL: migrasi mengutip identifier reserved (mis. "desc") dengan kutip ganda
+            // ANSI, sedangkan default sql_mode MySQL membacanya sebagai literal string.
+            // ANSI_QUOTES membuatnya dikenali sebagai nama kolom (Postgres/SQLite sudah ANSI).
+            // Backtick milik Exposed tetap valid saat ANSI_QUOTES aktif.
+            if (config.driver.contains("mysql", ignoreCase = true)) {
+                connectionInitSql = "SET SESSION sql_mode = CONCAT(@@sql_mode, ',ANSI_QUOTES')"
+            }
+        }
+        return HikariDataSource(hikari)
+    }
+
+    private fun runFlyway(dataSource: DataSource) {
         val flyway = Flyway.configure()
-            .dataSource(config.url, config.user, config.password)
+            .dataSource(dataSource)
             .locations("classpath:db/migrations")
             .baselineOnMigrate(true)
-            .apply {
-                // MySQL: skrip migrasi mengutip identifier reserved (mis. "desc") dengan
-                // kutip ganda ANSI. Default sql_mode MySQL memperlakukan "..." sebagai
-                // literal string → error. ANSI_QUOTES membuatnya dikenali sebagai nama
-                // kolom (Postgres/SQLite sudah ANSI secara default). DML Exposed memakai
-                // backtick, jadi ini hanya perlu untuk koneksi Flyway.
-                if (config.driver.contains("mysql", ignoreCase = true)) {
-                    initSql("SET SESSION sql_mode = CONCAT(@@sql_mode, ',ANSI_QUOTES')")
-                }
-            }
             .load()
         // V3/V6/V9 ditulis ulang dari dialek SQLite ke SQL portabel. Isinya setara
         // untuk DB yang sudah terlanjur bermigrasi, tapi checksum-nya berubah → tanpa

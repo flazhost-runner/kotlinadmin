@@ -197,6 +197,7 @@ database {
   name     = ${?DB_DATABASE}  # kotlinadmin
   user     = ${?DB_USERNAME}
   password = ${?DB_PASSWORD}
+  maxPool  = ${?DB_MAX_POOL}  # 3 — HikariCP; jatah koneksi DB dibagi ke semua replika
 
   # Override penuh — dipakai hanya bila butuh parameter JDBC khusus (mis. sslmode).
   url    = ${?DB_URL}
