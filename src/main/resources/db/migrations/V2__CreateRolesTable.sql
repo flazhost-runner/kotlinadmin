@@ -5,8 +5,8 @@ CREATE TABLE IF NOT EXISTS roles (
     "desc"     VARCHAR(255),
     created_by VARCHAR(36),
     updated_by VARCHAR(36),
-    created_at TIMESTAMP    NOT NULL,
-    updated_at TIMESTAMP    NOT NULL,
+    created_at TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     CONSTRAINT roles_name_unique UNIQUE (name)
 );
