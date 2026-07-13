@@ -57,9 +57,15 @@ dependencies {
     implementation("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-java-time:$exposedVersion")
 
-    // Database driver + migrations
+    // Database drivers (SQLite dev; MySQL/PostgreSQL prod) + migrations.
     implementation("org.xerial:sqlite-jdbc:3.46.1.3")
+    implementation("com.mysql:mysql-connector-j:8.4.0")
+    implementation("org.postgresql:postgresql:42.7.4")
     implementation("org.flywaydb:flyway-core:$flywayVersion")
+    // Flyway 10 memecah dukungan per-DB ke modul terpisah — tanpa ini Flyway
+    // menolak jdbc:mysql / jdbc:postgresql ("No database found to handle ...").
+    implementation("org.flywaydb:flyway-mysql:$flywayVersion")
+    implementation("org.flywaydb:flyway-database-postgresql:$flywayVersion")
 
     // DI — Koin
     implementation("io.insert-koin:koin-core:$koinVersion")
@@ -98,6 +104,9 @@ dependencies {
 // ── test ─────────────────────────────────────────────────────────────────────
 tasks.withType<Test> {
     useJUnitPlatform()
+    // `./gradlew test -Dkotest.tags=smoke` menaruh properti di JVM Gradle, bukan di JVM
+    // test yang fork. Tanpa forward ini filter tag Kotest tidak pernah sampai ke runner.
+    System.getProperty("kotest.tags")?.let { systemProperty("kotest.tags", it) }
 }
 
 // ── detekt ───────────────────────────────────────────────────────────────────

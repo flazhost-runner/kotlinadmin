@@ -189,10 +189,18 @@ app {
 }
 
 database {
-  url    = ${?DB_URL}      # jdbc:sqlite:./kotlinadmin.db
-  driver = ${?DB_DRIVER}   # org.sqlite.JDBC
-  user   = ${?DB_USER}
+  # DB_TYPE menentukan engine: sqlite (default) | mysql | postgres.
+  # URL & driver JDBC diturunkan di AppConfig.resolveDb dari type + host/port/name.
+  type     = ${?DB_TYPE}      # sqlite
+  host     = ${?DB_HOST}      # localhost
+  port     = ${?DB_PORT}      # 3306 (mysql) / 5432 (postgres)
+  name     = ${?DB_DATABASE}  # kotlinadmin
+  user     = ${?DB_USERNAME}
   password = ${?DB_PASSWORD}
+
+  # Override penuh — dipakai hanya bila butuh parameter JDBC khusus (mis. sslmode).
+  url    = ${?DB_URL}
+  driver = ${?DB_DRIVER}
 }
 
 redis {

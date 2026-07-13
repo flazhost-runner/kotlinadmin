@@ -9,7 +9,7 @@ Suite pengujian menyeluruh: **Unit, Integration, API, Security, BDD**. CI menjal
 | Test runner | Kotest 5.9.1 (JUnit5 engine) |
 | BDD | Cucumber-JVM 7.20.1 (cucumber-kotlin) |
 | HTTP test | `ktor-server-test-host` 3.1.3 (`testApplication`) |
-| DB test | `org.xerial:sqlite-jdbc` — SQLite in-memory |
+| DB test | SQLite (default) — atau MySQL/PostgreSQL bila `DB_*` di-set, lihat catatan di bawah |
 | Redis | di-mock (fake in-memory implementation) |
 
 ## Konfigurasi
@@ -29,8 +29,9 @@ app {
 }
 
 database {
-  url      = "jdbc:sqlite::memory:"
-  driver   = "org.sqlite.JDBC"
+  type     = "sqlite"       # file, bukan ":memory:" — lihat catatan di bawah
+  url      = ""             # kosongkan: url non-kosong menang atas DB_TYPE
+  driver   = ""
   user     = ""
   password = ""
 }
@@ -40,6 +41,22 @@ redis {
   port = 6379
 }
 ```
+
+> **Penting — `testApplication` tidak memuat `application.conf`.**
+> Test host Ktor memasang `ApplicationConfig` kosong, jadi file di atas *tidak* otomatis
+> berlaku untuk test yang memanggil `testApplication { application { module() } }`.
+> Karena itu `AppConfig` membaca env sebagai fallback (`AppConfig.valueOf`): tanpa env,
+> test memakai default SQLite; dengan `DB_TYPE=mysql|postgres` (seperti di job db-compat),
+> test benar-benar bermigrasi ke database tersebut.
+>
+> Ini bukan detail sepele: sebelumnya job db-compat hijau tanpa pernah menyentuh MySQL/PostgreSQL
+> sama sekali. Lihat penjaga "Assert migrations really ran" di `ci.yml`.
+
+> **Jangan pakai `jdbc:sqlite::memory:`.**
+> Exposed membuka koneksi baru per transaksi dan setiap koneksi ke `:memory:` mendapat
+> database kosong sendiri — schema hasil Flyway tidak pernah terlihat oleh query aplikasi
+> (26 test gagal saat dicoba). Default test memakai SQLite file `./kotlinadmin.db`
+> (sudah di-gitignore).
 
 ### Test setup
 

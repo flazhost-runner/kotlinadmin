@@ -37,6 +37,13 @@ data class AppConfig(
         private const val DEFAULT_JWT_SECRET = "change-me-in-production-min-32-chars"
         private const val DEFAULT_SESSION_SECRET = "change-me-session-secret-min-32xx"
 
+        private const val MYSQL_DRIVER = "com.mysql.cj.jdbc.Driver"
+        private const val POSTGRES_DRIVER = "org.postgresql.Driver"
+        private const val SQLITE_DRIVER = "org.sqlite.JDBC"
+        private const val DEFAULT_SQLITE_URL = "jdbc:sqlite:./kotlinadmin.db"
+        private const val MYSQL_PORT = 3306
+        private const val POSTGRES_PORT = 5432
+
         fun fromEnv(config: ApplicationConfig): AppConfig {
             val appMode = config.propertyOrNull("app.mode")?.getString() ?: "full"
             val jwtSecret = config.propertyOrNull("app.jwtSecret")?.getString() ?: DEFAULT_JWT_SECRET
@@ -85,12 +92,7 @@ data class AppConfig(
                     fromName = config.propertyOrNull("mail.fromName")?.getString() ?: "KotlinAdmin",
                     fromAddress = config.propertyOrNull("mail.fromAddress")?.getString() ?: ""
                 ),
-                db = DbConfig(
-                    url = config.propertyOrNull("database.url")?.getString() ?: "jdbc:sqlite:./kotlinadmin.db",
-                    driver = config.propertyOrNull("database.driver")?.getString() ?: "org.sqlite.JDBC",
-                    user = config.propertyOrNull("database.user")?.getString() ?: "",
-                    password = config.propertyOrNull("database.password")?.getString() ?: ""
-                ),
+                db = resolveDb(config),
                 redis = RedisConfig(
                     url = config.propertyOrNull("redis.url")?.getString() ?: "redis://127.0.0.1:6379",
                     host = config.propertyOrNull("redis.host")?.getString() ?: "localhost",
@@ -98,6 +100,62 @@ data class AppConfig(
                     password = config.propertyOrNull("redis.password")?.getString()
                 )
             )
+        }
+
+        /**
+         * Susun DbConfig dari DB_TYPE + DB_HOST/DB_PORT/DB_DATABASE (paritas env NodeAdmin
+         * dan port lain di fleet). DB_URL/DB_DRIVER tetap dihormati sebagai override penuh
+         * bagi pemakai yang butuh parameter JDBC khusus (mis. sslmode, serverTimezone).
+         */
+        private fun resolveDb(config: ApplicationConfig): DbConfig {
+            val explicitUrl = config.valueOf("database.url", "DB_URL")
+            val type = config.valueOf("database.type", "DB_TYPE")?.lowercase()
+            val host = config.valueOf("database.host", "DB_HOST") ?: "localhost"
+            val name = config.valueOf("database.name", "DB_DATABASE")
+                ?: config.valueOf("database.name", "DB_NAME")
+                ?: "kotlinadmin"
+            val port = config.valueOf("database.port", "DB_PORT")?.toIntOrNull()
+
+            val (url, driver) = when {
+                explicitUrl != null -> explicitUrl to (
+                    config.valueOf("database.driver", "DB_DRIVER") ?: driverForUrl(explicitUrl)
+                    )
+                type == "mysql" || type == "mariadb" ->
+                    "jdbc:mysql://$host:${port ?: MYSQL_PORT}/$name" to MYSQL_DRIVER
+                type == "postgres" || type == "postgresql" ->
+                    "jdbc:postgresql://$host:${port ?: POSTGRES_PORT}/$name" to POSTGRES_DRIVER
+                // Catatan: SQLite in-memory sengaja tidak disediakan. Exposed membuka koneksi
+                // baru per transaksi dan tiap koneksi ke ":memory:" mendapat DB kosong
+                // sendiri — hasil migrasi Flyway tak akan terlihat oleh query aplikasi.
+                else -> DEFAULT_SQLITE_URL to SQLITE_DRIVER
+            }
+
+            return DbConfig(
+                url = url,
+                driver = driver,
+                user = config.valueOf("database.user", "DB_USERNAME")
+                    ?: config.valueOf("database.user", "DB_USER")
+                    ?: "",
+                password = config.valueOf("database.password", "DB_PASSWORD") ?: ""
+            )
+        }
+
+        /**
+         * Ambil nilai dari HOCON, lalu jatuh ke environment variable bila kosong.
+         *
+         * Fallback env itu wajib: `testApplication` Ktor memasang ApplicationConfig kosong —
+         * `application.conf` tidak ikut dimuat — sehingga tanpa ini setiap test (termasuk job
+         * DB Compatibility di CI) selalu memakai default SQLite dan mengabaikan DB_* dari CI.
+         */
+        private fun ApplicationConfig.valueOf(key: String, envKey: String): String? =
+            propertyOrNull(key)?.getString()?.takeIf { it.isNotBlank() }
+                ?: System.getenv(envKey)?.takeIf { it.isNotBlank() }
+
+        /** Tebak driver dari skema JDBC saat DB_URL diberikan tanpa DB_DRIVER. */
+        private fun driverForUrl(url: String): String = when {
+            url.startsWith("jdbc:mysql") || url.startsWith("jdbc:mariadb") -> MYSQL_DRIVER
+            url.startsWith("jdbc:postgresql") -> POSTGRES_DRIVER
+            else -> SQLITE_DRIVER
         }
 
         fun parseExpiresIn(s: String): Long {

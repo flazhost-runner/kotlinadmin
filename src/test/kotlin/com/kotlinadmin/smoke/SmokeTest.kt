@@ -1,6 +1,7 @@
 package com.kotlinadmin.smoke
 
 import com.kotlinadmin.module
+import io.kotest.core.NamedTag
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
@@ -10,6 +11,11 @@ import io.ktor.http.*
 import io.ktor.server.testing.*
 
 class SmokeTest : DescribeSpec({
+
+    // Job "DB Compatibility" di CI menjalankan `-Dkotest.tags=smoke` terhadap MySQL &
+    // PostgreSQL. Tanpa tag ini, filter tersebut tidak memilih spec apa pun → nol test
+    // jalan dan job hijau tanpa pernah menyentuh migrasi.
+    tags(NamedTag("smoke"))
 
     describe("Smoke Tests") {
 

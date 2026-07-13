@@ -12,5 +12,7 @@ CREATE TABLE IF NOT EXISTS permissions (
     PRIMARY KEY (id)
 );
 
-CREATE INDEX IF NOT EXISTS permissions_name_idx       ON permissions (name);
-CREATE INDEX IF NOT EXISTS permissions_guard_name_idx ON permissions (guard_name);
+-- MySQL tidak mengenal IF NOT EXISTS pada CREATE INDEX. Flyway menjamin migrasi
+-- ini hanya dieksekusi sekali, jadi penjaga tersebut memang tidak diperlukan.
+CREATE INDEX permissions_name_idx       ON permissions (name);
+CREATE INDEX permissions_guard_name_idx ON permissions (guard_name);
