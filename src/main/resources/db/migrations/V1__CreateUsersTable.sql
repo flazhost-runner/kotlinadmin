@@ -4,7 +4,14 @@ CREATE TABLE IF NOT EXISTS users (
     name                 VARCHAR(50)  NOT NULL,
     phone                VARCHAR(15),
     email                VARCHAR(255) NOT NULL,
-    email_verified_at    TIMESTAMP,
+    -- NULL WAJIB DISEBUT. Ini kolom TIMESTAMP pertama di tabel, dan pada MySQL dengan
+    -- explicit_defaults_for_timestamp=OFF (setelan RDS produksi) kolom TIMESTAMP pertama
+    -- yang tidak menyebut NULL/DEFAULT diam-diam menjadi
+    --     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP.
+    -- Akibatnya: user yang belum verifikasi email tercatat SUDAH terverifikasi (NULL
+    -- dipaksa jadi "sekarang"), dan tanggal verifikasi ter-reset setiap baris di-update.
+    -- Tidak terlihat di SQLite/PostgreSQL — hanya rusak di MySQL.
+    email_verified_at    TIMESTAMP    NULL DEFAULT NULL,
     password             VARCHAR(255) NOT NULL,
     password_otp         VARCHAR(255),
     password_otp_expires BIGINT,
